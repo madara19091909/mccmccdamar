@@ -1,0 +1,76 @@
+name: Android Build
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-build-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FLUTTER_VERSION: "3.27.4"
+
+jobs:
+  build-apk:
+    name: Analyze, test and build APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: Install SQLite library (needed by database tests)
+        run: sudo apt-get update && sudo apt-get install -y libsqlite3-dev
+
+      - name: Flutter version
+        run: flutter --version
+
+      - name: Get dependencies
+        run: |
+          flutter pub get || { echo "::error title=pub get failed::Dependency resolution failed. Check pubspec.yaml."; exit 1; }
+
+      - name: Format code
+        run: |
+          # Applies the standard Dart formatting on the runner, then verifies it.
+          dart format lib test
+          dart format --output=none --set-exit-if-changed lib test || { echo "::error title=Format check failed::Run 'dart format lib test' locally."; exit 1; }
+
+      - name: Analyze
+        run: |
+          flutter analyze --no-fatal-infos || { echo "::error title=Analyze failed::flutter analyze found errors or warnings."; exit 1; }
+
+      - name: Run tests
+        run: |
+          flutter test || { echo "::error title=Tests failed::One or more tests failed. APK build was skipped."; exit 1; }
+
+      - name: Build release APK
+        run: |
+          flutter build apk --release || { echo "::error title=APK build failed::flutter build apk --release failed."; exit 1; }
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: echo-release-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+          retention-days: 30
