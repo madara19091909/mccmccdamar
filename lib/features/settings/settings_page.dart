@@ -2,7 +2,6 @@ import 'dart:io';
 
 import 'package:echo/core/constants.dart';
 import 'package:echo/core/format.dart';
-import 'package:echo/data/image_store.dart';
 import 'package:echo/navigation/app_routes.dart';
 import 'package:echo/services/backup_service.dart';
 import 'package:echo/state/memory_controller.dart';
