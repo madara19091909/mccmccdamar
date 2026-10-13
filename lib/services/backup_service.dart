@@ -249,6 +249,7 @@ class BackupService {
     );
   }
 
-  Future<RestoreResult> restore(String source) =>
-      restoreData(parse(source));
-}
+  Future<RestoreResult> restore(String source) async {
+  final data = parse(source);
+  return restoreData(data);
+  }
